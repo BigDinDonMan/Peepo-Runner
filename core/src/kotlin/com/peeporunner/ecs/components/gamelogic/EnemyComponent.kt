@@ -4,7 +4,9 @@ import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.utils.Pool
 
 class EnemyComponent : Component, Pool.Poolable {
-    override fun reset() {
+    var score = 0
 
+    override fun reset() {
+        score = 0
     }
 }

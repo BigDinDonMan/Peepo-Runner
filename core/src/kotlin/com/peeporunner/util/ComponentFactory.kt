@@ -11,6 +11,7 @@ import com.badlogic.gdx.physics.box2d.*
 import com.peeporunner.ecs.components.*
 import com.peeporunner.ecs.components.gamelogic.CoinComponent
 import com.peeporunner.ecs.components.gamelogic.CoinType
+import com.peeporunner.ecs.components.gamelogic.EnemyComponent
 import java.util.*
 
 class ComponentFactory(val engine: Engine, val world: World) {
@@ -118,5 +119,9 @@ class ComponentFactory(val engine: Engine, val world: World) {
 
     fun newAudioComponent(vararg sounds: Pair<String, Sound>): AudioComponent = engine.createComponent(AudioComponent::class.java).apply {
         this.sounds.putAll(sounds)
+    }
+
+    fun newEnemyData(score: Int): EnemyComponent = engine.createComponent(EnemyComponent::class.java).apply {
+        this.score = score
     }
 }
