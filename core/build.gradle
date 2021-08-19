@@ -1,0 +1,8 @@
+sourceCompatibility = 1.7
+[compileJava]*.options*.encoding = 'UTF-8'
+
+sourceSets.main.java.srcDirs = []
+sourceSets.main.kotlin.srcDirs = ["src/kotlin"]
+
+eclipse.project.name = appName + "-core"
+
