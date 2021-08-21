@@ -361,13 +361,17 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         }}
     }
 
-    private fun createEnemy(x: Float, y: Float, score: Int) {
+    private fun createEnemy(x: Float, y: Float, score: Int, sinAmplitude: Float, sinFrequency: Float) {
         initializationService.queueEntity(entityPool.obtain()) { e -> kotlin.run {
             val transform = componentFactory.newTransform(x, y, 50f, 50f) //temporary width + height
             val enemyComponent = componentFactory.newEnemyData(score)
             val animationComponent = componentFactory.newAnimator()
             val textureComponent = engine.createComponent(TextureComponent::class.java)
-            e.addComponents(transform, enemyComponent, animationComponent, textureComponent)
+            val audioComponent = componentFactory.newAudioComponent()
+            val bodyComponent = componentFactory.newBoxBody(BodyDef.BodyType.KinematicBody)
+            val sineWaveComponent = componentFactory.newSineWaveData(sinAmplitude, sinFrequency)
+            e.addComponents(transform, enemyComponent, animationComponent, textureComponent,
+                    audioComponent, bodyComponent, sineWaveComponent)
             e
         } }
     }
