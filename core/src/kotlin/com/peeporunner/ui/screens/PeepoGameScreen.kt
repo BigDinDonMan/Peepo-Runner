@@ -32,11 +32,14 @@ import com.peeporunner.ecs.input.PeepoInputController
 import com.peeporunner.ecs.systems.*
 import com.peeporunner.ui.widgets.CoinCounter
 import com.peeporunner.util.*
+import com.peeporunner.util.timers.GameTimer
+import com.peeporunner.util.timers.RandomizedGameTimer
 import kotlinx.coroutines.*
 import kotlin.math.pow
 import kotlin.properties.Delegates
 import kotlin.random.Random
 
+//todo: change screen class locations to not be in the UI section
 @Suppress("UNCHECKED_CAST")
 class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: SpriteBatch, val uiBatch: SpriteBatch, private val engine: Engine, private val world: World, private val assetManager: AssetManager) : ScreenAdapter(), ApplicationListener {
 
@@ -137,6 +140,10 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
             val alpha = MathUtils.clamp(cooldownTimer.elapsedTime() / cooldownTimer.targetTime(), 0.35f, 1f)
             attackButton.setColor(color.r, color.g, color.b, alpha)
         })
+    }
+
+    private val generationTimer: RandomizedGameTimer by lazy {
+        RandomizedGameTimer(LOWER_GENERATION_INTERVAL, UPPER_GENERATION_INTERVAL, true, this::performGenerationStep)
     }
 
     init {
@@ -467,6 +474,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         listOf(countDownLabel, scoreLabel, coinCounter, pauseButton, attackButton).forEach(uiStage::addActor)
     }
 
+    //todo: make this abomination into a non-thread and non-coroutine function (timer class with time randomized between lower and upper bound)
     @OptIn(DelicateCoroutinesApi::class)
     private fun launchGenerationThread() {
         generationCoroutine = GlobalScope.launch {
@@ -489,6 +497,10 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
                 }
             }
         }
+    }
+
+    private fun performGenerationStep() {
+
     }
 
     private fun stopGenerationThread() {
