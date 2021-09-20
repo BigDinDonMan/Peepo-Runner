@@ -4,17 +4,22 @@ import com.peeporunner.util.Action
 import kotlin.random.Random
 import kotlin.random.nextInt
 
-class RandomizedGameTimer(private val lowerBound: Int, private val upperBound: Int, looping: Boolean = false, elapsedAction: Action = {}) : AbstractTimer(looping, elapsedAction) {
+class RandomizedGameTimer(private val lowerBound: Double, private val upperBound: Double, looping: Boolean = false, elapsedAction: Action = {}) : AbstractTimer(looping, elapsedAction) {
 
-    private var targetTime = Random.nextInt(lowerBound, upperBound)
+    private var targetTime = 0.0
+
+    init {
+        targetTime = Random.nextDouble(lowerBound, upperBound)
+    }
 
     override fun update(deltaTime: Float) {
         if (!started) return
         elapsed += deltaTime
+        println(elapsed)
         if (elapsed >= targetTime) {
             elapsedAction.invoke()
             if (looping) {
-                targetTime = Random.nextInt(lowerBound, upperBound)
+                targetTime = Random.nextDouble(lowerBound, upperBound)
                 elapsed = 0f
             } else {
                 stop()

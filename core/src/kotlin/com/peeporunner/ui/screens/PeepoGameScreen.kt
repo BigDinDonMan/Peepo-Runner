@@ -114,8 +114,8 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
 
         private const val PLAYER_SNAPBACK_SPEED = 62.5f
 
-        private const val LOWER_GENERATION_INTERVAL = 700
-        private const val UPPER_GENERATION_INTERVAL = 1100
+        private const val LOWER_GENERATION_INTERVAL = 0.7 //secs
+        private const val UPPER_GENERATION_INTERVAL = 1.1 //secs
         private const val MINIMUM_BUILDING_WIDTH = 150.0
         private const val MAXIMUM_BUILDING_WIDTH = 200.0
         private const val MINIMUM_BUILDING_HEIGHT = 150.0
@@ -143,7 +143,8 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
     }
 
     private val generationTimer: RandomizedGameTimer by lazy {
-        RandomizedGameTimer(LOWER_GENERATION_INTERVAL, UPPER_GENERATION_INTERVAL, true, this::performGenerationStep)
+        RandomizedGameTimer(LOWER_GENERATION_INTERVAL, UPPER_GENERATION_INTERVAL,
+                looping = true, elapsedAction = this::performGenerationStep)
     }
 
     init {
@@ -172,6 +173,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
 
     override fun render(delta: Float) {
         engine.update(delta)
+        generationTimer.update(delta)
         updateGameScore()
         increaseGameSpeed(delta)
         snapBackPlayerIfMovedBack()
@@ -207,7 +209,6 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
     }
 
     override fun dispose() {
-        stopGenerationThread()
         engine.systems.forEach(engine::removeSystem)
         engine.entities.forEach { e ->
             kotlin.run {
@@ -419,7 +420,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
                     engine.systems.forEach { s -> s.setProcessing(true) }
                     velocitySystem.setProcessing(false)
                     setupInputController()
-                    launchGenerationThread()
+                    generationTimer.start()
                 }
             }
         }, 0f, 1f)
@@ -474,37 +475,21 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         listOf(countDownLabel, scoreLabel, coinCounter, pauseButton, attackButton).forEach(uiStage::addActor)
     }
 
-    //todo: make this abomination into a non-thread and non-coroutine function (timer class with time randomized between lower and upper bound)
-    @OptIn(DelicateCoroutinesApi::class)
-    private fun launchGenerationThread() {
-        generationCoroutine = GlobalScope.launch {
-            while (!generationCoroutine.isCancelled) {
-                val generationDelayMillis = Random.nextInt(LOWER_GENERATION_INTERVAL, UPPER_GENERATION_INTERVAL).toLong()
-                delay(generationDelayMillis)
-                val buildingWidth = Random.nextDouble(MINIMUM_BUILDING_WIDTH, MAXIMUM_BUILDING_WIDTH).toFloat()
-                val buildingHeight = Random.nextDouble(MINIMUM_BUILDING_HEIGHT, MAXIMUM_BUILDING_HEIGHT).toFloat()
-                val x = Gdx.graphics.width.toFloat() + buildingWidth
-                createBuilding(x + buildingWidth, 0f, buildingWidth, buildingHeight)
-                createJumpingSurface(x + buildingWidth, buildingHeight + 1, buildingWidth)
-                val coinSpawnProbability = Random.nextInt(0, 100)
-                val spawnCoin = coinSpawnProbability in 40..60
-                if (spawnCoin) {
-                    val coinX = x + buildingWidth + coinTextures[CoinType.COIN_1]!!.width / 2
-                    val coinY = buildingHeight + 75f
-                    val amplitude = Random.nextDouble(MINIMUM_SINE_AMPLITUDE.toDouble(), MAXIMUM_SINE_AMPLITUDE.toDouble()).toFloat()
-                    val frequency = Random.nextDouble(MINIMUM_SINE_FREQUENCY.toDouble(), MAXIMUM_SINE_FREQUENCY.toDouble()).toFloat()
-                    createCoin(coinX, coinY, amplitude, frequency)
-                }
-            }
-        }
-    }
-
     private fun performGenerationStep() {
-
-    }
-
-    private fun stopGenerationThread() {
-        generationCoroutine.cancel()
+        val buildingWidth = Random.nextDouble(MINIMUM_BUILDING_WIDTH, MAXIMUM_BUILDING_WIDTH).toFloat()
+        val buildingHeight = Random.nextDouble(MINIMUM_BUILDING_HEIGHT, MAXIMUM_BUILDING_HEIGHT).toFloat()
+        val x = Gdx.graphics.width.toFloat() + buildingWidth
+        createBuilding(x + buildingWidth, 0f, buildingWidth, buildingHeight)
+        createJumpingSurface(x + buildingWidth, buildingHeight + 1, buildingWidth)
+        val coinSpawnProbability = Random.nextInt(0, 100)
+        val spawnCoin = coinSpawnProbability in 40..60
+        if (spawnCoin) {
+            val coinX = x + buildingWidth + coinTextures[CoinType.COIN_1]!!.width / 2
+            val coinY = buildingHeight + 75f
+            val amplitude = Random.nextDouble(MINIMUM_SINE_AMPLITUDE.toDouble(), MAXIMUM_SINE_AMPLITUDE.toDouble()).toFloat()
+            val frequency = Random.nextDouble(MINIMUM_SINE_FREQUENCY.toDouble(), MAXIMUM_SINE_FREQUENCY.toDouble()).toFloat()
+            createCoin(coinX, coinY, amplitude, frequency)
+        }
     }
 
     private fun pauseGame() {
@@ -512,7 +497,6 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         velocitySystem.setProcessing(false)
         sineMovementSystem.setProcessing(false)
         animationSystem.setProcessing(false)
-        stopGenerationThread()
     }
 
     private fun resumeGame() {
@@ -520,7 +504,6 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         velocitySystem.setProcessing(true)
         sineMovementSystem.setProcessing(true)
         animationSystem.setProcessing(true)
-        launchGenerationThread()
     }
 
     fun togglePause() {
