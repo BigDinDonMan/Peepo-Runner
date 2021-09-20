@@ -497,6 +497,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         velocitySystem.setProcessing(false)
         sineMovementSystem.setProcessing(false)
         animationSystem.setProcessing(false)
+        generationTimer.stop()
     }
 
     private fun resumeGame() {
@@ -504,6 +505,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         velocitySystem.setProcessing(true)
         sineMovementSystem.setProcessing(true)
         animationSystem.setProcessing(true)
+        generationTimer.resume()
     }
 
     fun togglePause() {

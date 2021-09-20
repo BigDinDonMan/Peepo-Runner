@@ -15,6 +15,11 @@ abstract class AbstractTimer(val looping: Boolean = false, val elapsedAction: Ac
         started = false
     }
 
+    //difference between this and start is that it doesnt reset elapsed time
+    fun resume() {
+        started = true
+    }
+
     fun elapsedTime() = elapsed
 
     abstract fun update(deltaTime: Float)

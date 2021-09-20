@@ -15,7 +15,6 @@ class RandomizedGameTimer(private val lowerBound: Double, private val upperBound
     override fun update(deltaTime: Float) {
         if (!started) return
         elapsed += deltaTime
-        println(elapsed)
         if (elapsed >= targetTime) {
             elapsedAction.invoke()
             if (looping) {
