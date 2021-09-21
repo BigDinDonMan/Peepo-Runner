@@ -8,8 +8,6 @@ import com.peeporunner.ecs.components.PhysicsBodyComponent
 import com.peeporunner.ecs.components.TransformComponent
 import com.peeporunner.ecs.components.mappers.CompMappers
 import com.peeporunner.ecs.components.movement.MovementPatternComponent
-import com.peeporunner.ecs.components.movement.ParametricCircleMovementComponent
-import com.peeporunner.ecs.components.movement.SineMovementComponent
 
 class MovementPatternSystem : IteratingSystem(Family.all(TransformComponent::class.java, PhysicsBodyComponent::class.java, MovementPatternComponent::class.java).get()) {
 
@@ -18,7 +16,7 @@ class MovementPatternSystem : IteratingSystem(Family.all(TransformComponent::cla
         val physicsBody = CompMappers.physicsBodyMapper.get(entity)
         val transform = CompMappers.transformMapper.get(entity)
 
-        pattern.movementType.calculate()//transform, physicsBody)
+        pattern.movementType.calculate(pattern, transform, physicsBody)//transform, physicsBody)
         pattern.time += deltaTime
     }
 }

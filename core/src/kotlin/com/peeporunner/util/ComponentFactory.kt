@@ -12,7 +12,7 @@ import com.peeporunner.ecs.components.gamelogic.CoinComponent
 import com.peeporunner.ecs.components.gamelogic.CoinType
 import com.peeporunner.ecs.components.gamelogic.EnemyComponent
 import com.peeporunner.ecs.components.movement.MovementPatternComponent
-import com.peeporunner.ecs.components.movement.SineMovementComponent
+import com.peeporunner.ecs.components.movement.MovementType
 
 class ComponentFactory(val engine: Engine, val world: World) {
     fun newTransform(initialX: Float, initialY: Float, width: Float, height: Float, scaleX: Float = 1f, scaleY: Float = 1f, zIndex: Float = 0f): TransformComponent =
@@ -108,6 +108,7 @@ class ComponentFactory(val engine: Engine, val world: World) {
                 params["frequency"] = frequency
                 params["amplitude"] = amplitude
                 originalPosition.set(originalX, originalY)
+                movementType = MovementType.SINE_WAVE
             }
 
     fun newCoinComponent(coinType: CoinType): CoinComponent = engine.createComponent(CoinComponent::class.java).apply { this.coinType = coinType }
