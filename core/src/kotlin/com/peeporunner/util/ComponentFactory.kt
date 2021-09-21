@@ -1,18 +1,18 @@
 package com.peeporunner.util
 
 import com.badlogic.ashley.core.Engine
-import com.badlogic.gdx.Audio
-import com.badlogic.gdx.audio.Music
 import com.badlogic.gdx.audio.Sound
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.TextureRegion
+import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.physics.box2d.*
 import com.peeporunner.ecs.components.*
 import com.peeporunner.ecs.components.gamelogic.CoinComponent
 import com.peeporunner.ecs.components.gamelogic.CoinType
 import com.peeporunner.ecs.components.gamelogic.EnemyComponent
-import java.util.*
+import com.peeporunner.ecs.components.movement.MovementPatternComponent
+import com.peeporunner.ecs.components.movement.SineMovementComponent
 
 class ComponentFactory(val engine: Engine, val world: World) {
     fun newTransform(initialX: Float, initialY: Float, width: Float, height: Float, scaleX: Float = 1f, scaleY: Float = 1f, zIndex: Float = 0f): TransformComponent =
@@ -103,10 +103,11 @@ class ComponentFactory(val engine: Engine, val world: World) {
     fun newVelocityData(initialVelocityX: Float = 0f, initialVelocityY: Float = 0f): EnvironmentVelocityComponent =
             engine.createComponent(EnvironmentVelocityComponent::class.java).apply { velocity.set(initialVelocityX, initialVelocityY) }
 
-    fun newSineWaveData(amplitude: Float, frequency: Float): SineMovementComponent =
-            engine.createComponent(SineMovementComponent::class.java).apply {
-                this.amplitude = amplitude
-                this.frequency = frequency
+    fun newSineWaveData(amplitude: Float, frequency: Float, originalX: Float = 0f, originalY: Float = 0f): MovementPatternComponent =
+            engine.createComponent(MovementPatternComponent::class.java).apply {
+                params["frequency"] = frequency
+                params["amplitude"] = amplitude
+                originalPosition.set(originalX, originalY)
             }
 
     fun newCoinComponent(coinType: CoinType): CoinComponent = engine.createComponent(CoinComponent::class.java).apply { this.coinType = coinType }

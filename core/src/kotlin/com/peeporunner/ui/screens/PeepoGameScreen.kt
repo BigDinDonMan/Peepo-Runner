@@ -51,7 +51,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
     private val renderSystem = RenderSystem(spriteBatch)
     private val physicsSystem = PhysicsSystem(world)
     private val velocitySystem = EnvironmentVelocitySystem()
-    private val sineMovementSystem = SineMovementSystem()
+    private val movementPatternSystem = MovementPatternSystem()
     private val debugPhysicsSystem = PhysicsDebugRenderSystem(world, renderSystem.camera)
 
     private val viewport = StretchViewport(Gdx.graphics.width.toFloat(), Gdx.graphics.height.toFloat(), renderSystem.camera)
@@ -125,6 +125,9 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         private const val MAXIMUM_SINE_FREQUENCY = 4f
         private const val MINIMUM_SINE_AMPLITUDE = 2f
         private const val MAXIMUM_SINE_AMPLITUDE = 4f
+
+        private val COIN_SPAWN_PROBABILITY = 40..60
+        private val ENEMY_SPAWN_PROBABILITY = 20..30 //temp
     }
 
     private var currentGameSpeed = BASIC_ENVIRONMENT_SCROLL_SPEED
@@ -173,6 +176,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
 
     override fun render(delta: Float) {
         engine.update(delta)
+        println("patterns: ${movementPatternSystem.entities.size()}")
         generationTimer.update(delta)
         updateGameScore()
         increaseGameSpeed(delta)
@@ -361,7 +365,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
             val tagComponent = componentFactory.newTag("Coin")
             val velocityComponent = componentFactory.newVelocityData(BASIC_ENVIRONMENT_SCROLL_SPEED)
 
-            val sineComponent = componentFactory.newSineWaveData(sinAmplitude, sinFrequency)
+            val sineComponent = componentFactory.newSineWaveData(sinAmplitude, sinFrequency, x, y)
 
             e.addComponents(transform, textureComponent, physicsBodyComponent, velocityComponent,
                             tagComponent, collisionDataComponent, coinComponent, sineComponent, audioComponent)
@@ -400,7 +404,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
     private fun initEntitySystems() {
         engine.addSystem(physicsSystem)
         engine.addSystem(velocitySystem)
-        engine.addSystem(sineMovementSystem)
+        engine.addSystem(movementPatternSystem)
         engine.addSystem(animationSystem)
         engine.addSystem(renderSystem)
         engine.addSystem(debugPhysicsSystem)
@@ -482,7 +486,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         createBuilding(x + buildingWidth, 0f, buildingWidth, buildingHeight)
         createJumpingSurface(x + buildingWidth, buildingHeight + 1, buildingWidth)
         val coinSpawnProbability = Random.nextInt(0, 100)
-        val spawnCoin = coinSpawnProbability in 40..60
+        val spawnCoin = coinSpawnProbability in COIN_SPAWN_PROBABILITY
         if (spawnCoin) {
             val coinX = x + buildingWidth + coinTextures[CoinType.COIN_1]!!.width / 2
             val coinY = buildingHeight + 75f
@@ -490,12 +494,19 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
             val frequency = Random.nextDouble(MINIMUM_SINE_FREQUENCY.toDouble(), MAXIMUM_SINE_FREQUENCY.toDouble()).toFloat()
             createCoin(coinX, coinY, amplitude, frequency)
         }
+        val enemySpawnProbability = Random.nextInt(0, 100)
+        val spawnEnemy = enemySpawnProbability in ENEMY_SPAWN_PROBABILITY
+        if (spawnEnemy) {
+            val enemyX = 0f
+            val enemyY = 0f
+
+        }
     }
 
     private fun pauseGame() {
         physicsSystem.setProcessing(false)
         velocitySystem.setProcessing(false)
-        sineMovementSystem.setProcessing(false)
+        movementPatternSystem.setProcessing(false)
         animationSystem.setProcessing(false)
         generationTimer.stop()
     }
@@ -503,7 +514,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
     private fun resumeGame() {
         physicsSystem.setProcessing(true)
         velocitySystem.setProcessing(true)
-        sineMovementSystem.setProcessing(true)
+        movementPatternSystem.setProcessing(true)
         animationSystem.setProcessing(true)
         generationTimer.resume()
     }

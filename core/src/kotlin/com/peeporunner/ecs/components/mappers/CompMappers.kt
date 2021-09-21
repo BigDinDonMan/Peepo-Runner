@@ -3,6 +3,7 @@ package com.peeporunner.ecs.components.mappers
 import com.badlogic.ashley.core.ComponentMapper
 import com.peeporunner.ecs.components.*
 import com.peeporunner.ecs.components.gamelogic.PeepoPlayerComponent
+import com.peeporunner.ecs.components.movement.MovementPatternComponent
 
 object CompMappers {
     val transformMapper: ComponentMapper<TransformComponent> = ComponentMapper.getFor(TransformComponent::class.java)
@@ -14,5 +15,5 @@ object CompMappers {
     val collisionDataMapper: ComponentMapper<CollisionDataComponent> = ComponentMapper.getFor(CollisionDataComponent::class.java)
     val playerComponentMapper: ComponentMapper<PeepoPlayerComponent> = ComponentMapper.getFor(PeepoPlayerComponent::class.java)
     val environmentVelocityMapper: ComponentMapper<EnvironmentVelocityComponent> = ComponentMapper.getFor(EnvironmentVelocityComponent::class.java)
-    val sineComponentMapper: ComponentMapper<SineMovementComponent> = ComponentMapper.getFor(SineMovementComponent::class.java)
+    val movementPatternMapper: ComponentMapper<MovementPatternComponent> = ComponentMapper.getFor(MovementPatternComponent::class.java)
 }

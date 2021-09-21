@@ -3,10 +3,8 @@ package com.peeporunner.ecs.systems
 import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.core.Family
 import com.badlogic.ashley.systems.IteratingSystem
-import com.badlogic.gdx.physics.box2d.Body
 import com.badlogic.gdx.physics.box2d.World
 import com.peeporunner.ecs.components.PhysicsBodyComponent
-import com.peeporunner.ecs.components.SineMovementComponent
 import com.peeporunner.ecs.components.TransformComponent
 import com.peeporunner.ecs.components.mappers.CompMappers
 
