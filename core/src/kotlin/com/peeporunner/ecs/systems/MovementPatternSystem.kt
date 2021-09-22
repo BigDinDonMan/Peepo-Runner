@@ -16,7 +16,7 @@ class MovementPatternSystem : IteratingSystem(Family.all(TransformComponent::cla
         val physicsBody = CompMappers.physicsBodyMapper.get(entity)
         val transform = CompMappers.transformMapper.get(entity)
 
-        pattern.movementType.calculate(pattern, transform, physicsBody)//transform, physicsBody)
+        pattern.movementType.calculate(pattern, transform, physicsBody)
         pattern.time += deltaTime
     }
 }

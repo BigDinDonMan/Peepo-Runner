@@ -176,7 +176,6 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
 
     override fun render(delta: Float) {
         engine.update(delta)
-        println("patterns: ${movementPatternSystem.entities.size()}")
         generationTimer.update(delta)
         updateGameScore()
         increaseGameSpeed(delta)
@@ -535,6 +534,24 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         createJumpingSurface(950f, 351f, 150f)
         createBuilding(1150f, 0f, 100f, 250f)
         createJumpingSurface(1150f, 251f, 100f)
+
+        //temp
+        initializationService.queueEntity(entityPool.obtain()) { e -> kotlin.run {
+            val physicsBody = componentFactory.newBoxBody(BodyDef.BodyType.KinematicBody, boxWidth = 64f, boxHeight = 64f, isSensor = true, userData = e, gravityScale = 0f)
+            physicsBody.freezeY = false
+            physicsBody.freezeX = false
+            val movementEntity = entityPool.obtain()
+            val movementTransform = componentFactory.newTransform(550f, 550f, 64f, 64f, 1f, 1f)
+            val environmentVelocityComponent = componentFactory.newVelocityData(BASIC_ENVIRONMENT_SCROLL_SPEED)
+            val physicsBodyComponent = componentFactory.newBoxBody(BodyDef.BodyType.KinematicBody, 550f, 550f, gravityScale = 0f, userData = movementEntity)
+            movementEntity.addComponents(movementTransform, environmentVelocityComponent, physicsBodyComponent)
+
+            engine.addEntity(movementEntity)
+            val transform = componentFactory.newTransform(550f, 550f, 64f, 64f, 1f, 1f)
+            val movementComp = componentFactory.newParametricCircleData(25f, 5f, transform.position.x, transform.position.y)
+            e.addComponents(transform, physicsBody, movementComp)
+            e
+        } }
     }
 
     private fun gameOver() {

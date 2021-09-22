@@ -111,6 +111,14 @@ class ComponentFactory(val engine: Engine, val world: World) {
                 movementType = MovementType.SINE_WAVE
             }
 
+    fun newParametricCircleData(radius: Float, speed: Float = 1f, originalX: Float = 0f, originalY: Float = 0f): MovementPatternComponent =
+            engine.createComponent(MovementPatternComponent::class.java).apply {
+                params["radius"] = radius
+                params["speed"] = speed
+                originalPosition.set(originalX, originalY)
+                movementType = MovementType.PARAMETRIC_CIRCLE
+            }
+
     fun newCoinComponent(coinType: CoinType): CoinComponent = engine.createComponent(CoinComponent::class.java).apply { this.coinType = coinType }
 
     fun newTextureComponent(texture: Texture, color: Color = Color.WHITE): TextureComponent =
