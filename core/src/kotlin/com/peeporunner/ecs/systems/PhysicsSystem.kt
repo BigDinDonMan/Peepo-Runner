@@ -30,10 +30,13 @@ class PhysicsSystem(private val world: World) : IteratingSystem(Family.all(Trans
                 val transform = CompMappers.transformMapper.get(e)
                 val body = CompMappers.physicsBodyMapper.get(e)
                 val bodyPosition = body.body!!.position
+                var x = transform.position.x
+                var y = transform.position.y
                 if (!body.freezeX)
-                    transform.position.x = bodyPosition.x - transform.size.x / 2 * transform.scale.x
+                    x = bodyPosition.x - transform.size.x / 2 * transform.scale.x
                 if (!body.freezeY)
-                    transform.position.y = bodyPosition.y - transform.size.y / 2 * transform.scale.y
+                    y = bodyPosition.y - transform.size.y / 2 * transform.scale.y
+                transform.setPosition(x, y, transform.position.z)
             }
         }
 

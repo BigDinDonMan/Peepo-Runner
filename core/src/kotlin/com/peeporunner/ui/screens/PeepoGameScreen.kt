@@ -538,8 +538,6 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         //temp
         initializationService.queueEntity(entityPool.obtain()) { e -> kotlin.run {
             val physicsBody = componentFactory.newBoxBody(BodyDef.BodyType.KinematicBody, boxWidth = 64f, boxHeight = 64f, isSensor = true, userData = e, gravityScale = 0f)
-            physicsBody.freezeY = false
-            physicsBody.freezeX = false
             val movementEntity = entityPool.obtain()
             val movementTransform = componentFactory.newTransform(550f, 550f, 64f, 64f, 1f, 1f)
             val environmentVelocityComponent = componentFactory.newVelocityData(BASIC_ENVIRONMENT_SCROLL_SPEED)
@@ -549,6 +547,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
             engine.addEntity(movementEntity)
             val transform = componentFactory.newTransform(550f, 550f, 64f, 64f, 1f, 1f)
             val movementComp = componentFactory.newParametricCircleData(25f, 5f, transform.position.x, transform.position.y)
+            movementTransform.positionChanged = { _, _, _, x, y, _ -> movementComp.originalPosition.set(x,y) }
             e.addComponents(transform, physicsBody, movementComp)
             e
         } }
