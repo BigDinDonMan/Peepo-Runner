@@ -2,6 +2,7 @@ package com.peeporunner.ecs.components.mappers
 
 import com.badlogic.ashley.core.ComponentMapper
 import com.peeporunner.ecs.components.*
+import com.peeporunner.ecs.components.gamelogic.EnemyComponent
 import com.peeporunner.ecs.components.gamelogic.PeepoPlayerComponent
 import com.peeporunner.ecs.components.movement.MovementPatternComponent
 
@@ -16,4 +17,5 @@ object CompMappers {
     val playerComponentMapper: ComponentMapper<PeepoPlayerComponent> = ComponentMapper.getFor(PeepoPlayerComponent::class.java)
     val environmentVelocityMapper: ComponentMapper<EnvironmentVelocityComponent> = ComponentMapper.getFor(EnvironmentVelocityComponent::class.java)
     val movementPatternMapper: ComponentMapper<MovementPatternComponent> = ComponentMapper.getFor(MovementPatternComponent::class.java)
+    val enemyMapper: ComponentMapper<EnemyComponent> = ComponentMapper.getFor(EnemyComponent::class.java)
 }

@@ -29,8 +29,6 @@ enum class MovementType {
             val arg = pattern.time * speed
             val newX = pattern.originalPosition.x + radius * cos(arg)
             val newY = pattern.originalPosition.y + radius * sin(arg)
-            val diff = transform.position.x - newX
-            pattern.originalPosition.x -= abs(diff)
             transform.position.x = newX
             transform.position.y = newY
             body.body!!.setTransform(newX + transform.size.x / 2 * transform.scale.x, newY + transform.size.y / 2 * transform.scale.y, body.body!!.angle)

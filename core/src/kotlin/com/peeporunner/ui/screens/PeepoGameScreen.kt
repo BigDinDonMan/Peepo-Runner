@@ -26,6 +26,7 @@ import com.peeporunner.ecs.components.TextureComponent
 import com.peeporunner.ecs.components.gamelogic.CoinType
 import com.peeporunner.ecs.components.gamelogic.PeepoPlayerComponent
 import com.peeporunner.ecs.components.mappers.CompMappers
+import com.peeporunner.ecs.components.movement.MovementPatternComponent
 import com.peeporunner.ecs.components.physics.AttackRayCastCallback
 import com.peeporunner.ecs.components.physics.CollisionListener
 import com.peeporunner.ecs.input.PeepoInputController
@@ -39,7 +40,6 @@ import kotlin.math.pow
 import kotlin.properties.Delegates
 import kotlin.random.Random
 
-//todo: change screen class locations to not be in the UI section
 @Suppress("UNCHECKED_CAST")
 class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: SpriteBatch, val uiBatch: SpriteBatch, private val engine: Engine, private val world: World, private val assetManager: AssetManager) : ScreenAdapter(), ApplicationListener {
 
@@ -93,8 +93,6 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
     private val removalService = EntityRemovalService(engine, entityPool, world)
     private val initializationService = DeferredEntityInitializationService(engine)
 
-    private lateinit var generationCoroutine: Job
-
     var paused: Boolean by Delegates.observable(false) { _, _, newValue ->
         run {
             val callback = if (newValue) this@PeepoGameScreen::pauseGame else this@PeepoGameScreen::resumeGame
@@ -125,6 +123,13 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         private const val MAXIMUM_SINE_FREQUENCY = 4f
         private const val MINIMUM_SINE_AMPLITUDE = 2f
         private const val MAXIMUM_SINE_AMPLITUDE = 4f
+
+        private const val MINIMUM_CIRCLE_RADIUS = 30f
+        private const val MAXIMUM_CIRCLE_RADIUS = 60f
+        private const val MINIMUM_CIRCLING_SPEED = 5f
+        private const val MAXIMUM_CIRCLING_SPEED = 10f
+
+        private const val BASE_ENEMY_SCORE = 150
 
         private val COIN_SPAWN_PROBABILITY = 40..60
         private val ENEMY_SPAWN_PROBABILITY = 20..30 //temp
@@ -334,10 +339,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
 
             val transform = componentFactory.newTransform(
                     x, y, textureComponent.textureRegion!!.regionWidth.toFloat(),
-                    textureComponent.textureRegion!!.regionHeight.toFloat(), scaleX = 0.75f, scaleY = 0.75f).
-            apply {
-                originalPosition.set(x, y, originalPosition.z)
-            }
+                    textureComponent.textureRegion!!.regionHeight.toFloat(), scaleX = 0.75f, scaleY = 0.75f)
 
             val physicsBodyComponent = componentFactory.newCircleBody(
                     type = BodyDef.BodyType.KinematicBody,
@@ -372,7 +374,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         }}
     }
 
-    private fun createEnemy(x: Float, y: Float, score: Int, sinAmplitude: Float, sinFrequency: Float) {
+    private fun createSineEnemy(x: Float, y: Float, score: Int, sinAmplitude: Float, sinFrequency: Float) {
         initializationService.queueEntity(entityPool.obtain()) { e -> kotlin.run {
             val transform = componentFactory.newTransform(x, y, 50f, 50f) //temporary width + height
             val enemyComponent = componentFactory.newEnemyData(score)
@@ -381,8 +383,31 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
             val audioComponent = componentFactory.newAudioComponent()
             val bodyComponent = componentFactory.newBoxBody(BodyDef.BodyType.KinematicBody)
             val sineWaveComponent = componentFactory.newSineWaveData(sinAmplitude, sinFrequency)
+            val tag = componentFactory.newTag("Enemy")
             e.addComponents(transform, enemyComponent, animationComponent, textureComponent,
-                    audioComponent, bodyComponent, sineWaveComponent)
+                    audioComponent, bodyComponent, sineWaveComponent, tag)
+            e
+        } }
+    }
+
+    private fun createCircleEnemy(x: Float, y: Float, score: Int, radius: Float, circlingSpeed: Float) {
+        initializationService.queueEntity(entityPool.obtain()) { e -> kotlin.run {
+            val transform = componentFactory.newTransform(x, y, 50f, 50f) //temporary width + height
+            val enemyComponent = componentFactory.newEnemyData(score)
+            val animationComponent = componentFactory.newAnimator()
+            val textureComponent = engine.createComponent(TextureComponent::class.java)
+            val audioComponent = componentFactory.newAudioComponent()
+            val bodyComponent = componentFactory.newBoxBody(BodyDef.BodyType.KinematicBody)
+            val circleComponent = componentFactory.newParametricCircleData(radius, circlingSpeed)
+            val tag = componentFactory.newTag("Enemy")
+            val movementEntity = entityPool.obtain()
+            val movementTransform = componentFactory.newTransform(x, y, 0f, 0f)
+            val environmentVelocityComp = componentFactory.newVelocityData(BASIC_ENVIRONMENT_SCROLL_SPEED)
+            val movementPhysicsBody = componentFactory.newBoxBody(BodyDef.BodyType.KinematicBody, x, y, gravityScale = 0f, userData = movementEntity)
+            movementEntity.addComponents(movementTransform, environmentVelocityComp, movementPhysicsBody)
+            engine.addEntity(movementEntity)
+            e.addComponents(transform, enemyComponent, animationComponent, textureComponent,
+                    audioComponent, bodyComponent, circleComponent, tag)
             e
         } }
     }
@@ -462,7 +487,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         pauseButton.setPosition(0f, Gdx.graphics.height - pauseButton.height)
         attackButton = ImageTextButton("Attack", Skin(Gdx.files.internal("skins/uiskin.json")))
         attackButton.addListener(object : ClickListener() {
-            private val rayCastCallback = AttackRayCastCallback(playerEntity)
+            private val rayCastCallback = AttackRayCastCallback(playerEntity, removalService)
             override fun clicked(event: InputEvent, x: Float, y: Float) {
                 val playerComponent = CompMappers.playerComponentMapper.get(playerEntity)
                 val playerPhysicsBody = CompMappers.physicsBodyMapper.get(playerEntity)
@@ -484,7 +509,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         val x = Gdx.graphics.width.toFloat() + buildingWidth
         createBuilding(x + buildingWidth, 0f, buildingWidth, buildingHeight)
         createJumpingSurface(x + buildingWidth, buildingHeight + 1, buildingWidth)
-        val coinSpawnProbability = Random.nextInt(0, 100)
+        val coinSpawnProbability = getProbability()
         val spawnCoin = coinSpawnProbability in COIN_SPAWN_PROBABILITY
         if (spawnCoin) {
             val coinX = x + buildingWidth + coinTextures[CoinType.COIN_1]!!.width / 2
@@ -493,14 +518,28 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
             val frequency = Random.nextDouble(MINIMUM_SINE_FREQUENCY.toDouble(), MAXIMUM_SINE_FREQUENCY.toDouble()).toFloat()
             createCoin(coinX, coinY, amplitude, frequency)
         }
-        val enemySpawnProbability = Random.nextInt(0, 100)
+        val enemySpawnProbability = getProbability()
         val spawnEnemy = enemySpawnProbability in ENEMY_SPAWN_PROBABILITY
         if (spawnEnemy) {
             val enemyX = 0f
             val enemyY = 0f
-
+            val patternDecision = getProbability()
+            val score = BASE_ENEMY_SCORE
+            //im not proud of this if statement but well, it works so...
+            if (patternDecision < 50) { //spawn sine wave enemy
+                val enemyAmplitude = Random.nextDouble(MINIMUM_SINE_AMPLITUDE.toDouble(), MAXIMUM_SINE_AMPLITUDE.toDouble()).toFloat()
+                val enemyFrequency = Random.nextDouble(MINIMUM_SINE_FREQUENCY.toDouble(), MAXIMUM_SINE_FREQUENCY.toDouble()).toFloat()
+                 //todo: increase it based off of how long the game has been going for
+                createSineEnemy(enemyX, enemyY, score, enemyAmplitude, enemyFrequency)
+            } else { //spawn circle enemy
+                val radius = Random.nextDouble(MINIMUM_CIRCLE_RADIUS.toDouble(), MAXIMUM_CIRCLE_RADIUS.toDouble()).toFloat()
+                val speed = Random.nextDouble(MINIMUM_CIRCLING_SPEED.toDouble(), MAXIMUM_CIRCLING_SPEED.toDouble()).toFloat()
+                createCircleEnemy(enemyX, enemyY, score, radius, speed)
+            }
         }
     }
+
+    private fun getProbability() = Random.nextInt(0, 100)
 
     private fun pauseGame() {
         physicsSystem.setProcessing(false)
@@ -536,21 +575,21 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         createJumpingSurface(1150f, 251f, 100f)
 
         //temp
-        initializationService.queueEntity(entityPool.obtain()) { e -> kotlin.run {
-            val physicsBody = componentFactory.newBoxBody(BodyDef.BodyType.KinematicBody, boxWidth = 64f, boxHeight = 64f, isSensor = true, userData = e, gravityScale = 0f)
-            val movementEntity = entityPool.obtain()
-            val movementTransform = componentFactory.newTransform(550f, 550f, 64f, 64f, 1f, 1f)
-            val environmentVelocityComponent = componentFactory.newVelocityData(BASIC_ENVIRONMENT_SCROLL_SPEED)
-            val physicsBodyComponent = componentFactory.newBoxBody(BodyDef.BodyType.KinematicBody, 550f, 550f, gravityScale = 0f, userData = movementEntity)
-            movementEntity.addComponents(movementTransform, environmentVelocityComponent, physicsBodyComponent)
-
-            engine.addEntity(movementEntity)
-            val transform = componentFactory.newTransform(550f, 550f, 64f, 64f, 1f, 1f)
-            val movementComp = componentFactory.newParametricCircleData(25f, 5f, transform.position.x, transform.position.y)
-            movementTransform.positionChanged = { _, _, _, x, y, _ -> movementComp.originalPosition.set(x,y) }
-            e.addComponents(transform, physicsBody, movementComp)
-            e
-        } }
+//        initializationService.queueEntity(entityPool.obtain()) { e -> kotlin.run {
+//            val physicsBody = componentFactory.newBoxBody(BodyDef.BodyType.KinematicBody, boxWidth = 64f, boxHeight = 64f, isSensor = true, userData = e, gravityScale = 0f)
+//            //this is simply dumb but i dont know how to handle this differently now
+//            val movementEntity = entityPool.obtain()
+//            val movementTransform = componentFactory.newTransform(550f, 550f, 64f, 64f, 1f, 1f)
+//            val environmentVelocityComponent = componentFactory.newVelocityData(BASIC_ENVIRONMENT_SCROLL_SPEED)
+//            val physicsBodyComponent = componentFactory.newBoxBody(BodyDef.BodyType.KinematicBody, 550f, 550f, gravityScale = 0f, userData = movementEntity)
+//            movementEntity.addComponents(movementTransform, environmentVelocityComponent, physicsBodyComponent)
+//            engine.addEntity(movementEntity)
+//            val transform = componentFactory.newTransform(550f, 550f, 64f, 64f, 1f, 1f)
+//            val movementComp = componentFactory.newParametricCircleData(25f, 5f, transform.position.x, transform.position.y)
+//            movementTransform.positionChanged = { _, _, _, x, y, _ -> movementComp.originalPosition.set(x,y) }
+//            e.addComponents(transform, physicsBody, movementComp)
+//            e
+//        } }
     }
 
     private fun gameOver() {

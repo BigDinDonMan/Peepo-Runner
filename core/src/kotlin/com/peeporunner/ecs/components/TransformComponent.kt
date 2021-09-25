@@ -7,7 +7,6 @@ import com.badlogic.gdx.utils.Pool
 
 class TransformComponent : Component, Pool.Poolable {
     val position = Vector3()
-    val originalPosition = Vector3()
     val scale = Vector2(1f, 1f)
     val rotation = Vector2(0f, 0f)
     val size = Vector2(0f, 0f)
@@ -17,7 +16,6 @@ class TransformComponent : Component, Pool.Poolable {
         scale.set(1f, 1f)
         rotation.set(0f, 0f)
         size.set(0f, 0f)
-        originalPosition.set(0f, 0f, 0f)
         positionChanged = { _, _, _, _,_,_ -> }
     }
 
