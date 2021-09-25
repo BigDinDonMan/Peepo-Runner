@@ -21,6 +21,7 @@ class AttackRayCastCallback(private val playerEntity: Entity, private val remova
             playerComponent.currentPoints += enemyComponent.score
             //mark enemy entity for removal
             removalService.mark(hitEntity)
+            removalService.mark(CompMappers.physicsBodyMapper.get(hitEntity)!!.body!!)
             return 0f
         }
         return 1f //return 0f to terminate raycast, -1f to filter fixture, 1f to continue raycasting

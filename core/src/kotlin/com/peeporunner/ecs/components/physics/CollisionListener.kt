@@ -20,8 +20,9 @@ class CollisionListener : ContactListener {
     }
 
     private fun processCollision(contact: Contact?, extractor: (CollisionDataComponent) -> CollisionHandler) {
-        val entityA = contact!!.fixtureA.body.userData as Entity
-        val entityB = contact.fixtureB.body.userData as Entity
+        val entityA = contact!!.fixtureA.body.userData as Entity?
+        val entityB = contact.fixtureB.body.userData as Entity?
+        if (entityA == null || entityB == null) return
         val collisionDataA = CompMappers.collisionDataMapper.get(entityA)
         val collisionDataB = CompMappers.collisionDataMapper.get(entityB)
         if (collisionDataA != null && collisionDataB != null) {
