@@ -160,6 +160,15 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
                 looping = true, elapsedAction = this::performGenerationStep)
     }
 
+    private val hitTimer: GameTimer by lazy {
+        val playerComponent = CompMappers.playerComponentMapper.get(playerEntity)
+        GameTimer(playerComponent.hitCooldown, {
+            val playerTextureComponent = CompMappers.textureMapper.get(playerEntity)
+            playerTextureComponent.color = Color.WHITE
+            playerComponent.isHit = false
+        })
+    }
+
     init {
         loadGameAssets()
         setUpCoinRandomizer()
@@ -199,6 +208,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         uiStage.draw()
         checkForGameOver()
         cooldownTimer.update(delta)
+        hitTimer.update(delta)
     }
 
     private fun snapBackPlayerIfMovedBack() {
@@ -405,12 +415,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
                             playerTextureComponent.color = Color.RED
                             val audioComp = CompMappers.audioMapper.get(other)
                             audioComp.play("Hit")
-                            Timer().scheduleTask(object : Timer.Task() {
-                                override fun run() {
-                                    playerTextureComponent.color = Color.WHITE
-                                    playerComponent.isHit = false
-                                }
-                            },  playerComponent.hitCooldown, 0f, 1)
+                            hitTimer.start()
                         }
                     }}
             )
@@ -442,12 +447,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
                             playerTextureComponent.color = Color.RED
                             val audioComp = CompMappers.audioMapper.get(other)
                             audioComp.play("Hit")
-                            Timer().scheduleTask(object : Timer.Task() {
-                                override fun run() {
-                                    playerTextureComponent.color = Color.WHITE
-                                    playerComponent.isHit = false
-                                }
-                            },  playerComponent.hitCooldown, 0f, 1)
+                            hitTimer.start()
                         }
                     }}
             )
@@ -604,6 +604,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         movementPatternSystem.setProcessing(false)
         animationSystem.setProcessing(false)
         generationTimer.stop()
+        hitTimer.stop()
     }
 
     private fun resumeGame() {
@@ -612,6 +613,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         movementPatternSystem.setProcessing(true)
         animationSystem.setProcessing(true)
         generationTimer.resume()
+        hitTimer.resume()
     }
 
     fun togglePause() {
