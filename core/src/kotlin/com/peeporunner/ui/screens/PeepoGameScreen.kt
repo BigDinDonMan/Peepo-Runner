@@ -7,6 +7,7 @@ import com.badlogic.gdx.InputMultiplexer
 import com.badlogic.gdx.ScreenAdapter
 import com.badlogic.gdx.assets.AssetManager
 import com.badlogic.gdx.audio.Sound
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.*
 import com.badlogic.gdx.math.MathUtils
@@ -32,11 +33,13 @@ import com.peeporunner.ecs.components.physics.CollisionListener
 import com.peeporunner.ecs.input.PeepoInputController
 import com.peeporunner.ecs.systems.*
 import com.peeporunner.ui.widgets.CoinCounter
+import com.peeporunner.ui.widgets.HitCounter
 import com.peeporunner.util.*
 import com.peeporunner.util.timers.GameTimer
 import com.peeporunner.util.timers.RandomizedGameTimer
 import kotlinx.coroutines.*
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.pow
 import kotlin.properties.Delegates
 import kotlin.random.Random
@@ -57,6 +60,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
 
     private val viewport = StretchViewport(Gdx.graphics.width.toFloat(), Gdx.graphics.height.toFloat(), renderSystem.camera)
 
+    private lateinit var hitCounter: HitCounter
     private lateinit var countDownLabel: Label
     private lateinit var coinCounter: CoinCounter
     private lateinit var scoreLabel: Label
@@ -160,21 +164,23 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         loadGameAssets()
         setUpCoinRandomizer()
         world.setContactListener(CollisionListener())
+        initPlayerEntity()
         setupUI()
         initEntitySystems()
         buildLevelStart()
-        initPlayerEntity()
         startCountDownTimer()
     }
 
     private fun loadGameAssets() {
         assetManager.load("audio/coin-sound.wav", Sound::class.java)
         assetManager.load("audio/whip-snap.wav", Sound::class.java)
+        assetManager.load("audio/player-hit.wav", Sound::class.java)
         assetManager.load("graphics/pepecoin-brown.png", Texture::class.java)
         assetManager.load("graphics/pepecoin-silver.png", Texture::class.java)
         assetManager.load("graphics/pepecoin-gold.png", Texture::class.java)
         assetManager.load("graphics/pepecoin-platinum.png", Texture::class.java)
         assetManager.load("graphics/pepecoin-iridescent.png", Texture::class.java)
+        assetManager.load("graphics/hit-icon.png", Texture::class.java)
         assetManager.finishLoading()
     }
 
@@ -279,7 +285,8 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         } })
 
         val audioComponent = componentFactory.newAudioComponent(
-                "Attack" to assetManager.get("audio/whip-snap.wav", Sound::class.java)
+                "Attack" to assetManager.get("audio/whip-snap.wav", Sound::class.java),
+                "Hit" to assetManager.get("audio/player-hit.wav", Sound::class.java)
         )
 
         playerEntity.addComponents(
@@ -386,8 +393,29 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
                     boxHeight = 50f, boxWidth = 50f, userData = e, isSensor = true)
             val sineWaveComponent = componentFactory.newSineWaveData(sinAmplitude, sinFrequency)
             val tag = componentFactory.newTag("Enemy")
+            val collisionComponent = componentFactory.newCollisionHandler(
+                    {other -> kotlin.run {
+                        val otherTag = CompMappers.tagMapper.get(other)
+                        if (otherTag?.tag == "Player") {
+                            val playerComponent = CompMappers.playerComponentMapper.get(other)
+                            if (playerComponent.isHit) return@run
+                            playerComponent.hits--
+                            playerComponent.isHit = true
+                            val playerTextureComponent = CompMappers.textureMapper.get(other)
+                            playerTextureComponent.color = Color.RED
+                            val audioComp = CompMappers.audioMapper.get(other)
+                            audioComp.play("Hit")
+                            Timer().scheduleTask(object : Timer.Task() {
+                                override fun run() {
+                                    playerTextureComponent.color = Color.WHITE
+                                    playerComponent.isHit = false
+                                }
+                            },  playerComponent.hitCooldown, 0f, 1)
+                        }
+                    }}
+            )
             e.addComponents(transform, enemyComponent, /*animationComponent, textureComponent,*/
-                    audioComponent, bodyComponent, sineWaveComponent, tag)
+                    audioComponent, bodyComponent, sineWaveComponent, tag, collisionComponent)
             e
         } }
     }
@@ -402,16 +430,37 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
             val bodyComponent = componentFactory.newBoxBody(BodyDef.BodyType.KinematicBody, x, y, boxWidth = 50f, boxHeight = 50f, gravityScale = 0f, isSensor = true, userData = e)
             val circleComponent = componentFactory.newParametricCircleData(radius, circlingSpeed, x, y)
             val tag = componentFactory.newTag("Enemy")
+            val collisionComponent = componentFactory.newCollisionHandler(
+                    {other -> kotlin.run {
+                        val otherTag = CompMappers.tagMapper.get(other)
+                        if (otherTag?.tag == "Player") {
+                            val playerComponent = CompMappers.playerComponentMapper.get(other)
+                            if (playerComponent.isHit) return@run
+                            playerComponent.hits--
+                            playerComponent.isHit = true
+                            val playerTextureComponent = CompMappers.textureMapper.get(other)
+                            playerTextureComponent.color = Color.RED
+                            val audioComp = CompMappers.audioMapper.get(other)
+                            audioComp.play("Hit")
+                            Timer().scheduleTask(object : Timer.Task() {
+                                override fun run() {
+                                    playerTextureComponent.color = Color.WHITE
+                                    playerComponent.isHit = false
+                                }
+                            },  playerComponent.hitCooldown, 0f, 1)
+                        }
+                    }}
+            )
             val movementEntity = entityPool.obtain()
-            val movementTransform = componentFactory.newTransform(x, y, 0f, 0f)
+            val movementTransform = componentFactory.newTransform(x, y, 50f, 50f)
             movementTransform.positionChanged = { _,_,_,x_,y_,_ -> circleComponent.originalPosition.set(x_, y_) }
             val environmentVelocityComp = componentFactory.newVelocityData(BASIC_ENVIRONMENT_SCROLL_SPEED)
             val movementPhysicsBody = componentFactory.newBoxBody(BodyDef.BodyType.KinematicBody, x, y,
-                    gravityScale = 0f, boxWidth = 0f, boxHeight = 0f, userData = movementEntity, isSensor = true)
+                    gravityScale = 0f, boxWidth = 50f, boxHeight = 50f, userData = movementEntity, isSensor = true)
             movementEntity.addComponents(movementTransform, environmentVelocityComp, movementPhysicsBody)
             engine.addEntity(movementEntity)
             e.addComponents(transform, enemyComponent, /*animationComponent, textureComponent,*/
-                    audioComponent, bodyComponent, circleComponent, tag)
+                    audioComponent, bodyComponent, circleComponent, tag, collisionComponent)
             e
         } }
     }
@@ -475,6 +524,8 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         coinCounter = CoinCounter(coinTexture.resize(0.85f, 0.85f))
         coinCounter.setPosition(Gdx.graphics.width.toFloat() - coinCounter.width, Gdx.graphics.height.toFloat() - coinCounter.height)
         coinCounter.align(Align.topRight)
+        hitCounter = HitCounter(CompMappers.playerComponentMapper.get(playerEntity), assetManager.get("graphics/hit-icon.png", Texture::class.java), 0.5f)
+        hitCounter.setPosition(10f, 10f)
         countDownLabel.setPosition(Gdx.graphics.width.toFloat() / 2, Gdx.graphics.height.toFloat() / 2)
         countDownLabel.setAlignment(Align.center)
 
@@ -498,13 +549,14 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
                 val audioComponent = CompMappers.audioMapper.get(playerEntity)
                 val bodyPosition = playerPhysicsBody.body!!.position
                 world.rayCast(rayCastCallback, bodyPosition.x, bodyPosition.y, bodyPosition.x + playerComponent.range, bodyPosition.y)
+//                world.rayCast(rayCastCallback, bodyPosition.x, bodyPosition.y)
                 attackButton.touchable = Touchable.disabled
                 audioComponent.play("Attack")
                 cooldownTimer.start()
             }
         })
         attackButton.setPosition(Gdx.graphics.width - attackButton.width, attackButton.height)
-        listOf(countDownLabel, scoreLabel, coinCounter, pauseButton, attackButton).forEach(uiStage::addActor)
+        uiStage.addActors(countDownLabel, scoreLabel, coinCounter, hitCounter, pauseButton, attackButton)
     }
 
     private fun performGenerationStep() {
@@ -528,7 +580,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         val spawnEnemy = enemySpawnProbability in ENEMY_SPAWN_PROBABILITY
         if (spawnEnemy) {
             val enemyX = x + buildingWidth / 2
-            val enemyY = max(lastTransform.size.y, buildingHeight)
+            val enemyY = max(lastTransform.size.y, buildingHeight) + min(buildingHeight, lastTransform.size.y) / 2
             val patternDecision = getProbability()
             val score = BASE_ENEMY_SCORE
             //im not proud of this if statement but well, it works so...
@@ -622,7 +674,8 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
 
     private fun checkForGameOver() {
         val playerTransform = CompMappers.transformMapper.get(playerEntity)
-        if (playerTransform.position.y + playerTransform.size.y * playerTransform.scale.y < 0f) {
+        val playerComponent = CompMappers.playerComponentMapper.get(playerEntity)
+        if (playerTransform.position.y + playerTransform.size.y * playerTransform.scale.y < 0f || playerComponent.hits <= 0) {
             gameOver()
         }
     }

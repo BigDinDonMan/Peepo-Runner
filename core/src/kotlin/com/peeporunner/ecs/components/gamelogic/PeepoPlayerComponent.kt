@@ -12,6 +12,8 @@ class PeepoPlayerComponent : Component, Pool.Poolable {
     var hits = 3
     var range = 250f
     var attackCooldown = 0.4f // seconds
+    var hitCooldown = 0.75f
+    var isHit = false
 
     override fun reset() {
         canJump = false
@@ -22,5 +24,6 @@ class PeepoPlayerComponent : Component, Pool.Poolable {
         hits = 3
         range = 250f
         attackCooldown = 0.4f
+        hitCooldown = 0.75f
     }
 }
