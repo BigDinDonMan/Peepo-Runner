@@ -15,6 +15,7 @@ import com.badlogic.gdx.physics.box2d.Box2D
 import com.badlogic.gdx.physics.box2d.World
 import com.badlogic.gdx.utils.ScreenUtils
 import com.peeporunner.ui.screens.MainMenuScreen
+import com.peeporunner.util.enableTtfSupport
 
 
 class PeepoRunnerGame : Game() {
@@ -29,7 +30,7 @@ class PeepoRunnerGame : Game() {
     override fun create() {
         Box2D.init()
         assetManager = AssetManager()
-        setUpFontLoaders()
+        assetManager.enableTtfSupport()
         mainBatch = SpriteBatch()
         uiBatch = SpriteBatch()
         ecsEngine = PooledEngine()
@@ -49,12 +50,6 @@ class PeepoRunnerGame : Game() {
         uiBatch.dispose()
         physicsWorld.dispose()
         assetManager.dispose()
-    }
-
-    private fun setUpFontLoaders() {
-        val resolver = InternalFileHandleResolver()
-        assetManager.setLoader(FreeTypeFontGenerator::class.java, FreeTypeFontGeneratorLoader(resolver))
-        assetManager.setLoader(BitmapFont::class.java, ".ttf", FreetypeFontLoader(resolver))
     }
 
     fun backToMainMenu() {

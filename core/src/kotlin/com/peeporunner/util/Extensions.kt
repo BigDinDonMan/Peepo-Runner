@@ -2,8 +2,14 @@ package com.peeporunner.util
 
 import com.badlogic.ashley.core.Component
 import com.badlogic.ashley.core.Entity
+import com.badlogic.gdx.assets.AssetManager
+import com.badlogic.gdx.assets.loaders.resolvers.InternalFileHandleResolver
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.g2d.BitmapFont
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGeneratorLoader
+import com.badlogic.gdx.graphics.g2d.freetype.FreetypeFontLoader
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Stage
@@ -34,4 +40,10 @@ fun Stage.addActors(vararg actors: Actor) {
 
 fun Group.addActors(vararg actors: Actor) {
     actors.forEach(this::addActor)
+}
+
+fun AssetManager.enableTtfSupport() {
+    val resolver = InternalFileHandleResolver()
+    this.setLoader(FreeTypeFontGenerator::class.java, FreeTypeFontGeneratorLoader(resolver))
+    this.setLoader(BitmapFont::class.java, ".ttf", FreetypeFontLoader(resolver))
 }
