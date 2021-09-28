@@ -26,6 +26,7 @@ import com.peeporunner.ecs.components.AnimationComponent.AnimationStateData
 import com.peeporunner.ecs.components.TextureComponent
 import com.peeporunner.ecs.components.gamelogic.CoinType
 import com.peeporunner.ecs.components.gamelogic.PeepoPlayerComponent
+import com.peeporunner.ecs.components.gamelogic.bonuses.TemporaryBonus
 import com.peeporunner.ecs.components.mappers.CompMappers
 import com.peeporunner.ecs.components.movement.MovementPatternComponent
 import com.peeporunner.ecs.components.physics.AttackRayCastCallback
@@ -172,12 +173,18 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
     init {
         loadGameAssets()
         setUpCoinRandomizer()
+        initBonuses()
         world.setContactListener(CollisionListener())
         initPlayerEntity()
         setupUI()
         initEntitySystems()
         buildLevelStart()
         startCountDownTimer()
+    }
+
+    private fun initBonuses() {
+        TemporaryBonus.POINT_MULTIPLIER.onApply += { scoreLabel.setColor(Color.GREEN) }
+        TemporaryBonus.POINT_MULTIPLIER.onUnapply += { scoreLabel.setColor(Color.WHITE) }
     }
 
     private fun loadGameAssets() {
@@ -248,6 +255,13 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         engine.removeAllEntities()
         uiStage.dispose()
         font.dispose()
+        //clear bonuses callbacks
+        TemporaryBonus.values().forEach { v ->
+            run {
+                v.onApply.clear()
+                v.onUnapply.clear()
+            }
+        }
     }
 
     private fun setUpCoinRandomizer() {
