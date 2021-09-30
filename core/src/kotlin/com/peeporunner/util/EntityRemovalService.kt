@@ -6,7 +6,7 @@ import com.badlogic.gdx.physics.box2d.Body
 import com.badlogic.gdx.physics.box2d.Joint
 import com.badlogic.gdx.physics.box2d.World
 
-class EntityRemovalService(private val engine: Engine, private val entityPool: EntityPool, private val world: World) {
+class EntityRemovalService(private val engine: Engine, private val world: World) {
 
     private val entities = ArrayList<Entity>()
     private val bodies = ArrayList<Body>()
@@ -19,20 +19,17 @@ class EntityRemovalService(private val engine: Engine, private val entityPool: E
     }
 
     private fun processMarkedEntities() {
-        entities.forEach { e -> run {
-            engine.removeEntity(e)
-            entityPool.free(e)
-        } }
+        entities.forEach(engine::removeEntity)
         entities.clear()
     }
 
     private fun destroyMarkedBodies() {
-        bodies.forEach { body -> world.destroyBody(body) }
+        bodies.forEach(world::destroyBody)
         bodies.clear()
     }
 
     private fun destroyMarkedJoints() {
-        joints.forEach { joint -> world.destroyJoint(joint) }
+        joints.forEach(world::destroyJoint)
         joints.clear()
     }
 

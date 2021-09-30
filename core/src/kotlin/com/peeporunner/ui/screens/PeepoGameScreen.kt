@@ -11,8 +11,8 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.*
 import com.badlogic.gdx.math.MathUtils
-import com.badlogic.gdx.physics.box2d.BodyDef
-import com.badlogic.gdx.physics.box2d.World
+import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.physics.box2d.*
 import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.Touchable
@@ -28,7 +28,6 @@ import com.peeporunner.ecs.components.gamelogic.CoinType
 import com.peeporunner.ecs.components.gamelogic.PeepoPlayerComponent
 import com.peeporunner.ecs.components.gamelogic.bonuses.TemporaryBonus
 import com.peeporunner.ecs.components.mappers.CompMappers
-import com.peeporunner.ecs.components.movement.MovementPatternComponent
 import com.peeporunner.ecs.components.physics.AttackRayCastCallback
 import com.peeporunner.ecs.components.physics.CollisionListener
 import com.peeporunner.ecs.input.PeepoInputController
@@ -38,7 +37,6 @@ import com.peeporunner.ui.widgets.HitCounter
 import com.peeporunner.util.*
 import com.peeporunner.util.timers.GameTimer
 import com.peeporunner.util.timers.RandomizedGameTimer
-import kotlinx.coroutines.*
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -49,8 +47,7 @@ import kotlin.random.Random
 class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: SpriteBatch, val uiBatch: SpriteBatch, private val engine: Engine, private val world: World, private val assetManager: AssetManager) : ScreenAdapter(), ApplicationListener {
 
     private val playerStartPosition = Pair(60f, 300f)
-    private val entityPool = EntityPool(15, 75)
-    private val playerEntity = entityPool.obtain()
+    private val playerEntity = engine.createEntity()
 
     private val animationSystem = AnimationSystem()
     private val renderSystem = RenderSystem(spriteBatch)
@@ -96,7 +93,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
 
     private val coinValuesRandomizerList = ArrayList<CoinType>()
 
-    private val removalService = EntityRemovalService(engine, entityPool, world)
+    private val removalService = EntityRemovalService(engine, world)
     private val initializationService = DeferredEntityInitializationService(engine)
 
     var paused: Boolean by Delegates.observable(false) { _, _, newValue ->
@@ -251,7 +248,6 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
             }
         }
         removalService.process()
-        engine.entities.forEach(entityPool::free)
         engine.removeAllEntities()
         uiStage.dispose()
         font.dispose()
@@ -322,7 +318,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
     }
 
     private fun createBuilding(x: Float, y: Float, width: Float, height: Float) {
-        initializationService.queueEntity(entityPool.obtain()) { e -> kotlin.run {
+        initializationService.queueEntity(engine.createEntity()) { e -> kotlin.run {
             val transform = componentFactory.newTransform(x, y, width, height)
 
             val tagComponent = componentFactory.newTag("Building")
@@ -343,7 +339,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
     }
 
     private fun createJumpingSurface(x: Float, y: Float, width: Float) {
-        initializationService.queueEntity(entityPool.obtain()) { e -> kotlin.run {
+        initializationService.queueEntity(engine.createEntity()) { e -> kotlin.run {
             val transform = componentFactory.newTransform(x, y, width, 2.5f)
             val tagComponent = componentFactory.newTag("Jumping surface")
 
@@ -364,7 +360,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
     }
 
     private fun createCoin(x: Float, y: Float, sinAmplitude: Float, sinFrequency: Float) {
-        initializationService.queueEntity(entityPool.obtain()) { e -> kotlin.run {
+        initializationService.queueEntity(engine.createEntity()) { e -> kotlin.run {
             val coinComponent = componentFactory.newCoinComponent(coinValuesRandomizerList[Random.nextInt(0, coinValuesRandomizerList.size)])
 
             val textureComponent = componentFactory.newTextureComponent(coinTextures[coinComponent.coinType]!!)
@@ -407,7 +403,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
     }
 
     private fun createSineEnemy(x: Float, y: Float, score: Int, sinAmplitude: Float, sinFrequency: Float) {
-        initializationService.queueEntity(entityPool.obtain()) { e -> kotlin.run {
+        initializationService.queueEntity(engine.createEntity()) { e -> kotlin.run {
             val transform = componentFactory.newTransform(x, y, 50f, 50f) //temporary width + height
             val enemyComponent = componentFactory.newEnemyData(score)
             /*val animationComponent = componentFactory.newAnimator()*/
@@ -440,7 +436,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
     }
 
     private fun createCircleEnemy(x: Float, y: Float, score: Int, radius: Float, circlingSpeed: Float) {
-        initializationService.queueEntity(entityPool.obtain()) { e -> kotlin.run {
+        initializationService.queueEntity(engine.createEntity()) { e -> kotlin.run {
             val transform = componentFactory.newTransform(x, y, 50f, 50f) //temporary width + height
             val enemyComponent = componentFactory.newEnemyData(score)
 //            val animationComponent = componentFactory.newAnimator()
@@ -465,7 +461,7 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
                         }
                     }}
             )
-            val movementEntity = entityPool.obtain()
+            val movementEntity = engine.createEntity()
             val movementTransform = componentFactory.newTransform(x, y, 50f, 50f)
             movementTransform.positionChanged = { _,_,_,x_,y_,_ -> circleComponent.originalPosition.set(x_, y_) }
             val environmentVelocityComp = componentFactory.newVelocityData(BASIC_ENVIRONMENT_SCROLL_SPEED)
@@ -556,17 +552,38 @@ class PeepoGameScreen(private val game: PeepoRunnerGame, val spriteBatch: Sprite
         pauseButton.setPosition(0f, Gdx.graphics.height - pauseButton.height)
         attackButton = ImageTextButton("Attack", Skin(Gdx.files.internal("skins/uiskin.json")))
         attackButton.addListener(object : ClickListener() {
-            private val rayCastCallback = AttackRayCastCallback(playerEntity, removalService)
             override fun clicked(event: InputEvent, x: Float, y: Float) {
                 val playerComponent = CompMappers.playerComponentMapper.get(playerEntity)
                 val playerPhysicsBody = CompMappers.physicsBodyMapper.get(playerEntity)
                 val audioComponent = CompMappers.audioMapper.get(playerEntity)
                 val bodyPosition = playerPhysicsBody.body!!.position
-                world.rayCast(rayCastCallback, bodyPosition.x, bodyPosition.y, bodyPosition.x + playerComponent.range, bodyPosition.y)
-//                world.rayCast(rayCastCallback, bodyPosition.x, bodyPosition.y)
+                val attackCheckBody = buildAttackBody(playerComponent)
+                attackCheckBody.setTransform(bodyPosition.x + playerComponent.range / 2, bodyPosition.y, attackCheckBody.angle)
+                val fixture = attackCheckBody.fixtureList[0]
+                engine.entities.filter { CompMappers.tagMapper.get(it)?.tag == "Enemy" && fixture.testPoint(CompMappers.physicsBodyMapper.get(it).body!!.position) }.forEach { e -> kotlin.run {
+                    val enemyComponent = CompMappers.enemyMapper.get(e)
+                    playerComponent.currentPoints += (enemyComponent.score * playerComponent.pointMultiplier).toInt()
+                    removalService.mark(e)
+                    removalService.mark(CompMappers.physicsBodyMapper.get(e).body!!)
+                } }
                 attackButton.touchable = Touchable.disabled
                 audioComponent.play("Attack")
                 cooldownTimer.start()
+                removalService.mark(attackCheckBody)
+            }
+
+            private fun buildAttackBody(playerComponent: PeepoPlayerComponent): Body {
+                val shape = PolygonShape().apply { setAsBox(playerComponent.range, 25f) }
+                val def = FixtureDef().apply {
+                    isSensor = true
+                    this.shape = shape
+                }
+                val bodyDef = BodyDef().apply {
+                    gravityScale = 0f
+                }
+                val body = world.createBody(bodyDef)
+                body.createFixture(def)
+                return body.also { shape.dispose() }
             }
         })
         attackButton.setPosition(Gdx.graphics.width - attackButton.width, attackButton.height)

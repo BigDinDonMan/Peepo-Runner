@@ -49,6 +49,7 @@ class PeepoRunnerGame : Game() {
         mainBatch.dispose()
         uiBatch.dispose()
         physicsWorld.dispose()
+        screen?.dispose()
         assetManager.dispose()
     }
 
